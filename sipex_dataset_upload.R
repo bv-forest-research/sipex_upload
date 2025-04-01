@@ -23,6 +23,226 @@ clean_text <- function(text) {
   return(text)
 }
 
+# create slug
+create_slug <- function(title, existing_slugs = c()) {
+  # convert to lowercase replace special characters with -
+  slug <- tolower(gsub("[^a-zA-Z0-9-]", "-", title))
+  
+  # fix multiple dashes/long dash
+  slug <- gsub("-+", "-", slug)
+  slug <- gsub("^-|-$", "", slug)
+  
+  # limit 100
+  if (nchar(slug) > 100) {
+    slug <- substr(slug, 1, 100)
+    # check end
+    slug <- gsub("-$", "", slug)
+  }
+  
+  # unique slug if exists
+  original_slug <- slug
+  counter <- 1
+  
+  while (slug %in% existing_slugs) {
+    # add number at end
+    end <- paste0("-", counter)
+    # keep length 100
+    prefix_length <- min(100 - nchar(end), nchar(original_slug))
+    slug <- paste0(substr(original_slug, 1, prefix_length), end)
+    counter <- counter + 1
+  }
+  
+  return(slug)
+}
+
+# fetch organizations and check/create if needed
+fetch_check_create_organization <- function(api_key, ckan_url, org_name = NULL) {
+  
+  # conn
+  ckanr_setup(url = ckan_url, key = api_key)
+  
+  # list structure
+  organizations <- list(
+    names = character(0),
+    titles = character(0),
+    ids = list()
+  )
+  
+  # df for report
+  new_orgs_report <- data.frame(
+    name = character(),
+    slug = character(),
+    id = character(),
+    created_at = character(),
+    stringsAsFactors = FALSE
+  )
+  
+  # list orgs
+  org_list <- organization_list(limit = 1000)
+  
+  if (length(org_list) > 0) {
+    for (org in org_list) {
+      name <- org$name
+      title <- org$title
+      id <- org$id
+      
+      organizations$names <- c(organizations$names, name)
+      organizations$titles <- c(organizations$titles, title)
+      organizations$ids[[name]] <- id
+      
+      # mod title for fuzzy matching
+      mod_title <- tolower(gsub("[^a-zA-Z0-9]", "", title))
+      if (nchar(mod_title) > 0) {
+        organizations$ids[[paste0("title_", mod_title)]] <- id
+      }
+    }
+  }
+  
+  if (is.null(org_name) || org_name == "") {
+    return(list(
+      organizations = organizations,
+      new_orgs_report = new_orgs_report,
+      current_org_id = NULL,
+      org_result = NULL
+    ))
+  }
+  
+  # clean org name
+  org_name <- clean_text(org_name)
+  
+  if (org_name == "") {
+    return(list(
+      organizations = organizations,
+      new_orgs_report = new_orgs_report,
+      current_org_id = NULL,
+      org_result = list(
+        id = NULL,
+        status = "skipped"
+      )
+    ))
+  }
+  
+  # create org slug
+  org_slug <- create_slug(org_name, organizations$names)
+  
+  # check if exists
+  org_exists <- FALSE
+  org_id <- NULL
+  match_type <- NULL
+  
+  # name match
+  if (org_slug %in% organizations$names) {
+    org_exists <- TRUE
+    org_id <- organizations$ids[[org_slug]]
+    match_type <- "name"
+  }
+  # title match
+  else {
+    title_index <- which(organizations$titles == org_name)
+    if (length(title_index) > 0) {
+      existing_name <- organizations$names[title_index[1]]
+      org_exists <- TRUE
+      org_id <- organizations$ids[[existing_name]]
+      match_type <- "title"
+    }
+    # fuzzy title match
+    else {
+      mod_title <- tolower(gsub("[^a-zA-Z0-9]", "", org_name))
+      if (nchar(mod_title) > 0) {
+        key <- paste0("title_", mod_title)
+        if (!is.null(organizations$ids[[key]])) {
+          org_exists <- TRUE
+          org_id <- organizations$ids[[key]]
+          match_type <- "fuzzy_title"
+        }
+      }
+    }
+  }
+  
+  # if exists return id for adding
+  if (org_exists) {
+    cat("Organization exists:", org_name, "->", match_type, "match\n")
+    return(list(
+      organizations = organizations,
+      new_orgs_report = new_orgs_report,
+      current_org_id = org_id,
+      org_result = list(
+        id = org_id,
+        status = "existing"
+      )
+    ))
+  }
+  
+  # if org doesn't exist crate new
+  # body
+  org_data <- list(
+    name = org_slug,
+    title = org_name
+  )
+  
+  # convert to json
+  org_data_json <- toJSON(org_data, auto_unbox = TRUE)
+  
+  # create org
+  response <- POST(
+    url = paste0(ckan_url, "/api/3/action/organization_create"),
+    add_headers("Authorization" = api_key, 
+                "Content-Type" = "application/json"),
+    body = org_data_json,
+    encode = "raw"
+  )
+  
+  # result
+  org_response <- content(response)
+  
+  if (is.list(org_response) && !is.null(org_response$success) && org_response$success == TRUE) {
+    # if success, get id
+    org_id <- org_response$result$id
+    
+    # add to list
+    organizations$names <- c(organizations$names, org_slug)
+    organizations$titles <- c(organizations$titles, org_name)
+    organizations$ids[[org_slug]] <- org_id
+    
+    # add fuzzy key
+    mod_title <- tolower(gsub("[^a-zA-Z0-9]", "", org_name))
+    if (nchar(mod_title) > 0) {
+      organizations$ids[[paste0("title_", mod_title)]] <- org_id
+    }
+    
+    # new org reporting
+    new_orgs_report <- rbind(new_orgs_report, data.frame(
+      name = org_name,
+      slug = org_slug,
+      id = org_id,
+      created_at = format(Sys.time(), "%Y-%m-%d %H:%M:%S"),
+      stringsAsFactors = FALSE
+    ))
+    
+    return(list(
+      organizations = organizations,
+      new_orgs_report = new_orgs_report,
+      current_org_id = org_id,
+      org_result = list(
+        id = org_id,
+        status = "created"
+      )
+    ))
+  } else {
+    # failed to create org error
+    # reporting
+    return(list(
+      organizations = organizations,
+      new_orgs_report = new_orgs_report,
+      current_org_id = NULL,
+      org_result = list(
+        id = NULL,
+        status = "failed"
+      )
+    ))
+  }
+}
+
 # fetch and check for existing datasets
 fetch_and_check_datasets <- function(api_key, ckan_url, dataset_title = NULL, dataset_name = NULL) {
   
@@ -40,7 +260,6 @@ fetch_and_check_datasets <- function(api_key, ckan_url, dataset_title = NULL, da
   
   if (is.list(search_result) && !is.null(search_result$results)) {
     dataset_count <- length(search_result$results)
-    cat("Found", dataset_count, "datasets\n")
     
     if (dataset_count > 0) {
       for (dataset in search_result$results) {
@@ -52,7 +271,7 @@ fetch_and_check_datasets <- function(api_key, ckan_url, dataset_title = NULL, da
         existing_datasets$titles <- c(existing_datasets$titles, title)
         existing_datasets$ids[[name]] <- id
         
-        # Add normalized title for fuzzy matching
+        # mod title for fuzzy matching
         mod_title <- tolower(gsub("[^a-zA-Z0-9]", "", title))
         if (nchar(mod_title) > 0) {
           existing_datasets$ids[[paste0("title_", mod_title)]] <- id
@@ -111,41 +330,15 @@ fetch_and_check_datasets <- function(api_key, ckan_url, dataset_title = NULL, da
   ))
 }
 
-# create slug
-create_slug <- function(title, existing_slugs = c()) {
-  # convert to lowercase replace special characters with -
-  slug <- tolower(gsub("[^a-zA-Z0-9-]", "-", title))
-  
-  # fix multiple dashes/long dash
-  slug <- gsub("-+", "-", slug)
-  slug <- gsub("^-|-$", "", slug)
-  
-  # limit 100
-  if (nchar(slug) > 100) {
-    slug <- substr(slug, 1, 100)
-    # check end
-    slug <- gsub("-$", "", slug)
-  }
-  
-  # unique slug if exists
-  original_slug <- slug
-  counter <- 1
-  
-  while (slug %in% existing_slugs) {
-    # add number at end
-    end <- paste0("-", counter)
-    # keep length 100
-    prefix_length <- min(100 - nchar(end), nchar(original_slug))
-    slug <- paste0(substr(original_slug, 1, prefix_length), end)
-    counter <- counter + 1
-  }
-  
-  return(slug)
-}
-
 # create dataset and upload resources
 upload_datasets_and_resources <- function(datasets_csv_path, resources_csv_path, api_key, ckan_url) {
-  # check for existing
+  
+  # org data
+  org_data <- fetch_check_create_organization(api_key, ckan_url)
+  organizations <- org_data$organizations
+  new_orgs_report <- org_data$new_orgs_report
+  
+  # check for existing datasets
   fetch_result <- fetch_and_check_datasets(api_key, ckan_url)
   existing_data <- fetch_result$datasets
   
@@ -157,6 +350,7 @@ upload_datasets_and_resources <- function(datasets_csv_path, resources_csv_path,
   dataset_results <- data.frame(
     original_id = character(),
     title = character(),
+    organization = character(),
     ckan_id = character(),
     status = character(),
     error_message = character(),
@@ -217,6 +411,7 @@ upload_datasets_and_resources <- function(datasets_csv_path, resources_csv_path,
       dataset_results <- rbind(dataset_results, data.frame(
         original_id = dataset_id,
         title = dataset_title,
+        organization = "",
         ckan_id = created_datasets[[dataset_id]],
         status = "Skipped",
         error_message = "Already created in this session",
@@ -248,6 +443,7 @@ upload_datasets_and_resources <- function(datasets_csv_path, resources_csv_path,
         dataset_results <- rbind(dataset_results, data.frame(
           original_id = dataset_id,
           title = dataset_title,
+          organization = "",
           ckan_id = existing_id,
           status = paste0("Existing (", existence_check$match_type, " match)"),
           error_message = "",
@@ -270,20 +466,137 @@ upload_datasets_and_resources <- function(datasets_csv_path, resources_csv_path,
     
     #### tags #####
     tags <- list()
-    tag_list <- strsplit(dataset[["Tags"]], ",")[[1]]
-    for (tag in tag_list) {
-      tag <- trimws(tag)
-      tag <- clean_text(tag)
-      if (tag != "") {
-        # ckan format
-        tags <- append(tags, list(list(name = tag)))
+    
+    # initialize tags
+    if (!exists("tag_data") || is.null(tag_data)) {
+      tag_data <- list(
+        tags = list(
+          names = character(0),
+          normalized = character(0),
+          ids = list()
+        ),
+        new_tags_report = data.frame(
+          name = character(),
+          id = character(),
+          original_form = character(),
+          created_at = character(),
+          stringsAsFactors = FALSE
+        )
+      )
+      
+      # get existing
+      ckanr_setup(url = ckan_url, key = api_key)
+      existing_tags <- tag_list(limit = 10000)
+      
+      if (length(existing_tags) > 0) {
+        for (tag_item in existing_tags) {
+          name <- tag_item$name
+          id <- tag_item$id
+          
+          tag_data$tags$names <- c(tag_data$tags$names, name)
+          mod_name <- tolower(gsub("[^a-zA-Z0-9]", "", name))
+          tag_data$tags$normalized <- c(tag_data$tags$normalized, mod_name)
+          tag_data$tags$ids[[name]] <- id
+          
+          # mod name for fuzzy matches
+          if (nchar(mod_name) > 0) {
+            tag_data$tags$ids[[paste0("fuzz_", mod_name)]] <- id
+          }
+        }
+      }
+    }
+    
+    if ("Tags" %in% colnames(dataset) && !is.na(dataset[["Tags"]])) {
+      tag_list <- strsplit(dataset[["Tags"]], ",")[[1]]
+      processed_tags <- c()
+      
+      for (tag_text in tag_list) {
+        tag_text <- trimws(tag_text)
+        tag_text <- clean_text(tag_text)
+        
+        if (tag_text != "") {
+          
+          # normalize tag
+          mod_tag <- tolower(gsub("[^a-zA-Z0-9]", "", tag_text))
+          
+          # if exists, use existing
+          if (tag_text %in% tag_data$tags$names) {
+            # identical match
+            cat("Using existing tag (exact match):", tag_text, "\n")
+            tags <- append(tags, list(list(name = tag_text)))
+            processed_tags <- c(processed_tags, tag_text)
+          }
+          # fuzzy match
+          else if (mod_tag != "" && mod_tag %in% tag_data$tags$normalized) {
+            # get existing matching tag
+            idx <- which(tag_data$tags$normalized == mod_tag)[1]
+            existing_tag <- tag_data$tags$names[idx]
+            
+            tags <- append(tags, list(list(name = existing_tag)))
+            processed_tags <- c(processed_tags, existing_tag)
+          }
+          else {
+            
+            # else use new tag
+            new_tag_data <- list(name = tag_text)
+            new_tag_json <- toJSON(new_tag_data, auto_unbox = TRUE)
+            
+            # new tag
+            tag_response <- POST(
+              url = paste0(ckan_url, "/api/3/action/tag_create"),
+              add_headers("Authorization" = api_key,
+                          "Content-Type" = "application/json"),
+              body = new_tag_json,
+              encode = "raw"
+            )
+            
+            tag_result <- content(tag_response)
+            
+            if (is.list(tag_result) && !is.null(tag_result$success) && tag_result$success == TRUE) {
+              new_tag_id <- tag_result$result$id
+              new_tag_name <- tag_result$result$name
+              
+              # add to tag list
+              tag_data$tags$names <- c(tag_data$tags$names, new_tag_name)
+              tag_data$tags$normalized <- c(tag_data$tags$normalized, mod_tag)
+              tag_data$tags$ids[[new_tag_name]] <- new_tag_id
+              
+              # add fuzzy key
+              if (mod_tag != "") {
+                tag_data$tags$ids[[paste0("fuzz_", mod_tag)]] <- new_tag_id
+              }
+              
+              # reporting
+              tag_data$new_tags_report <- rbind(tag_data$new_tags_report, data.frame(
+                name = new_tag_name,
+                id = new_tag_id,
+                original_form = tag_text,
+                created_at = format(Sys.time(), "%Y-%m-%d %H:%M"),
+                stringsAsFactors = FALSE
+              ))
+              
+              tags <- append(tags, list(list(name = new_tag_name)))
+              processed_tags <- c(processed_tags, new_tag_name)
+            } else {
+              tags <- append(tags, list(list(name = tag_text)))
+              processed_tags <- c(processed_tags, tag_text)
+            }
+          }
+        }
       }
     }
     
     ##### organization #####
     organization <- NULL
+    org_id <- NULL
     if ("Organization" %in% colnames(dataset) && !is.na(dataset[["Organization"]])) {
       organization <- clean_text(dataset[["Organization"]])
+      
+      # check if exists or create
+      org_result <- fetch_check_create_organization(api_key, ckan_url, organization)
+      organizations <- org_result$organizations
+      new_orgs_report <- org_result$new_orgs_report
+      org_id <- org_result$current_org_id
     }
     
     ##### license #####
@@ -312,8 +625,8 @@ upload_datasets_and_resources <- function(datasets_csv_path, resources_csv_path,
       notes = description
     )
     
-    if (!is.null(organization) && !is.na(organization) && organization != "") {
-      body$owner_org <- organization
+    if (!is.null(org_id)) {
+      body$owner_org <- org_id
     }
     
     if (license_id != "notspecified") {
@@ -364,6 +677,7 @@ upload_datasets_and_resources <- function(datasets_csv_path, resources_csv_path,
       dataset_results <- rbind(dataset_results, data.frame(
         original_id = dataset_id,
         title = dataset_title,
+        organization = organization,
         ckan_id = ckan_dataset_id,
         status = "Success",
         error_message = "",
@@ -420,6 +734,8 @@ upload_datasets_and_resources <- function(datasets_csv_path, resources_csv_path,
                 body = resource_data,
                 encode = "multipart"
               )
+              
+              processed_resources <- processed_resources + 1
             } else {
               cat("  File not found:", file_path, "\n")
               next
@@ -437,6 +753,8 @@ upload_datasets_and_resources <- function(datasets_csv_path, resources_csv_path,
               body = resource_data_json,
               encode = "raw"
             )
+            
+            processed_resources <- processed_resources + 1
           } else {
             # skip if not url
             next
@@ -465,7 +783,7 @@ upload_datasets_and_resources <- function(datasets_csv_path, resources_csv_path,
             failed_resources <- failed_resources + 1
             
             # add error message
-            error_msg <- toJSON(resource_result$error)
+            error_msg <- if (!is.null(resource_result$error)) toJSON(resource_result$error) else "Unknown error"
             
             resource_results <- rbind(resource_results, data.frame(
               original_id = resource_id,
@@ -474,18 +792,18 @@ upload_datasets_and_resources <- function(datasets_csv_path, resources_csv_path,
               ckan_id = "",
               status = "Failed",
               error_message = error_msg,
-              upload_time = format(Sys.time(), "%Y-%m-%d %H:%M:%S"),
+              upload_time = format(Sys.time(), "%Y-%m-%d %H:%M"),
               stringsAsFactors = FALSE
             ))
           }
         }
       } else {
-        cat("No resources found", dataset_id, "\n")
+        cat("No resources found for dataset", dataset_id, "\n")
       }
     } else {
       # dataset creation fails
       cat("Dataset creation failed\n")
-      error_msg <- toJSON(dataset_response$error)
+      error_msg <- if (!is.null(dataset_response$error)) toJSON(dataset_response$error) else "Unknown error"
       
       # add to report
       failed_datasets <- failed_datasets + 1
@@ -493,6 +811,7 @@ upload_datasets_and_resources <- function(datasets_csv_path, resources_csv_path,
       dataset_results <- rbind(dataset_results, data.frame(
         original_id = dataset_id,
         title = dataset_title,
+        organization = organization,
         ckan_id = "",
         status = "Failed",
         error_message = error_msg,
@@ -509,9 +828,26 @@ upload_datasets_and_resources <- function(datasets_csv_path, resources_csv_path,
   timestamp <- format(Sys.time(), "%Y%m%d%H%M")
   datasets_report_path <- paste0("datasets_report_", timestamp, ".csv")
   resources_report_path <- paste0("resources_report_", timestamp, ".csv")
+  orgs_report_path <- paste0("new_organizations_report_", timestamp, ".csv")
+  tags_report_path <- paste0("new_tags_report_", timestamp, ".csv")
   
   write_csv(dataset_results, datasets_report_path)
   write_csv(resource_results, resources_report_path)
+  write_csv(new_orgs_report, orgs_report_path)
+  
+  # write tag report if any new tags
+  if (exists("tag_data") && !is.null(tag_data) && nrow(tag_data$new_tags_report) > 0) {
+    write_csv(tag_data$new_tags_report, tags_report_path)
+  } else {
+    empty_tags_report <- data.frame(
+      name = character(),
+      id = character(),
+      original_form = character(),
+      created_at = character(),
+      stringsAsFactors = FALSE
+    )
+    write_csv(empty_tags_report, tags_report_path)
+  }
   
   
   cat("\n\n")
@@ -528,16 +864,24 @@ upload_datasets_and_resources <- function(datasets_csv_path, resources_csv_path,
   cat("  Total:", processed_resources, "\n")
   cat("  Uploaded:", successful_resources, "\n")
   cat("  Failed:", failed_resources, "\n")
+  cat("\n")
+  cat("ORGANIZATIONS:\n")
+  cat("  Total new organizations:", nrow(new_orgs_report), "\n")
+  cat("\n")
+  cat("TAGS:\n")
+  cat("  New tags:", if (exists("tag_data") && !is.null(tag_data)) nrow(tag_data$new_tags_report) else 0, "\n")
   cat("==================================================\n")
   
   return(list(
     datasets = dataset_results,
     resources = resource_results,
+    new_organizations = new_orgs_report,
+    new_tags = if (exists("tag_data") && !is.null(tag_data)) tag_data$new_tags_report else data.frame(),
     created_datasets = created_datasets
   ))
 }
 
-api_key <- "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJiTzRNeFQxZ1FmUzVRb3FkcHluLWQ5Ujh2bGNULTBxZlRfVXlKeGJFRTg0IiwiaWF0IjoxNzQyMjQzNzU2fQ.FlCsTEiZfd5xdJQ2IStjJszbqfP79PamMY5benOsOmw"
+api_key <- "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJld1MxWFMtdmlTajZxSE9GREpMNmVJYWJtbTBOWWNJUFJwUnpHYTNEeTR3IiwiaWF0IjoxNzQzNTI3NjQ4fQ.foj6E1ZSynrYYpWL0zOmFFR_pcXS8JBhY67JEmhDwQs"
 ckan_url <- "http://staging-resources.sipexchangebc.com"
 datasets_csv_path <- "./datasets.csv"
 resources_csv_path <- "./resources.csv"
