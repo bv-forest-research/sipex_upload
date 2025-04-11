@@ -929,11 +929,11 @@ upload_datasets_and_resources <- function(datasets_csv_path, resources_csv_path,
 }
 
 # prod
-api_key_prod <- "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI1djZDTXl6MEN0SGZDNmtBcG41VDFSSndUcmZPSG5JUlZFYl9QQnA3U2xvIiwiaWF0IjoxNzQ0Mzc1NjAyfQ.3jiBeN8Y8pcmdPo6U1ZRKcJv9c9aK_OJkT-xAtfju4k"
+api_key_prod <- "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJsOXp3RjhjV3FsdGxuV0lfcjl3MXFIMF8xdWVHNUxHR19zamdMX0lRdUxrIiwiaWF0IjoxNzQ0MzgwNjM2fQ.WNzef0vVfmd7_Sn6viDpHdbwJrC5gsbfd3Wo4mC5kX0"
 ckan_url_prod <- "https://resources.sipexchangebc.com"
 
 # staging
-api_key <- "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJTaG5aSEFLZmRqazY5MEFGaDZXLVBoSjg1blhWMFhVd1ZCUEE2SFhuSUNnIiwiaWF0IjoxNzQ0Mzc1NzI4fQ.qsacmo-A96ZZ5wlNjP_TaWR3LD7HfIxsOj6EPOWGAws"
+api_key <- "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJTb21CSWFsNEo5NEFjQnJhSHpQUUNOTXFWdjdTSG1xcDVIbDRQMHhaYURRIiwiaWF0IjoxNzQ0MzgwNTkzfQ.nppj8YhcNrwtWp-WZ09Paor7yClsHIyPZcpbUGVd95Y"
 ckan_url <- "http://staging-resources.sipexchangebc.com"
 
 datasets_csv_path <- "./datasets.csv"
