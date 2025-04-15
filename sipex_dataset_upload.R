@@ -448,23 +448,23 @@ upload_datasets_and_resources <- function(datasets_csv_path, resources_csv_path,
     cat("----------------------------------------\n")
     
     # skip if already created
-    #if (dataset_id %in% names(created_datasets)) {
-    #  skipped_datasets <- skipped_datasets + 1
+    if (dataset_id %in% names(created_datasets)) {
+      skipped_datasets <- skipped_datasets + 1
       
       # reporting
-     # dataset_results <- rbind(dataset_results, data.frame(
-      #  original_id = dataset_id,
-      #  title = dataset_title,
-      #  organization = "",
-      #  ckan_id = created_datasets[[dataset_id]],
-      #  status = "Skipped",
-      #  error_message = "Already created in this session",
-      #  upload_time = format(Sys.time(), "%Y-%m-%d %H:%M:%S"),
-      #  stringsAsFactors = FALSE
-    #  ))
+      dataset_results <- rbind(dataset_results, data.frame(
+        original_id = dataset_id,
+        title = dataset_title,
+        organization = "",
+        ckan_id = created_datasets[[dataset_id]],
+        status = "Skipped",
+        error_message = "Already created in this session",
+        upload_time = format(Sys.time(), "%Y-%m-%d %H:%M:%S"),
+        stringsAsFactors = FALSE
+      ))
       
-    #  next
-    #}
+      next
+    }
     
     ##### title #####
     dataset_title <- clean_text(dataset_title)
@@ -476,31 +476,31 @@ upload_datasets_and_resources <- function(datasets_csv_path, resources_csv_path,
     check_result <- fetch_and_check_datasets(api_key, ckan_url, dataset_title, dataset_name)
     existence_check <- check_result$existence_check
     
-   # if (existence_check$exists) {
+    if (existence_check$exists) {
       
       # get existing ckan id
-    #  existing_id <- existence_check$id
-    #  if (!is.null(existing_id)) {
-    #    created_datasets[[dataset_id]] <- existing_id
+      existing_id <- existence_check$id
+      if (!is.null(existing_id)) {
+        created_datasets[[dataset_id]] <- existing_id
         
         # reporting
-    #    dataset_results <- rbind(dataset_results, data.frame(
-     #     original_id = dataset_id,
-    #      title = dataset_title,
-    #      organization = "",
-    #      ckan_id = existing_id,
-    #      status = paste0("Existing (", existence_check$match_type, " match)"),
-    #      error_message = "",
-    #      upload_time = format(Sys.time(), "%Y-%m-%d %H:%M:%S"),
-    #      stringsAsFactors = FALSE
-    #    ))
+        dataset_results <- rbind(dataset_results, data.frame(
+          original_id = dataset_id,
+          title = dataset_title,
+          organization = "",
+          ckan_id = existing_id,
+          status = paste0("Existing (", existence_check$match_type, " match)"),
+          error_message = "",
+          upload_time = format(Sys.time(), "%Y-%m-%d %H:%M:%S"),
+          stringsAsFactors = FALSE
+        ))
         
-    #    skipped_datasets <- skipped_datasets + 1
+        skipped_datasets <- skipped_datasets + 1
         
         # skips resource
-    #    next
-    #  } 
-    #}
+        next
+      } 
+    }
     
     ##### description #####
     description <- ""
@@ -941,16 +941,17 @@ upload_datasets_and_resources <- function(datasets_csv_path, resources_csv_path,
       ))
       
       # write csv
-      write_csv(dataset_results, paste0("datasets_error_report_", format(Sys.time(), "%Y%m%d%H%M"), ".csv"))
+      write_csv(dataset_results, file.path("upload reports",paste0("datasets_error_report_", 
+                                        format(Sys.time(), "%Y%m%d%H%M"), ".csv")))
     }
   }
   
   # generate and export reports
   timestamp <- format(Sys.time(), "%Y%m%d%H%M")
-  datasets_report_path <- paste0("datasets_report_", timestamp, ".csv")
-  resources_report_path <- paste0("resources_report_", timestamp, ".csv")
-  orgs_report_path <- paste0("new_organizations_report_", timestamp, ".csv")
-  tags_report_path <- paste0("new_tags_report_", timestamp, ".csv")
+  datasets_report_path <- file.path("upload reports",paste0("datasets_report_", timestamp, ".csv"))
+  resources_report_path <- file.path("upload reports",paste0("resources_report_", timestamp, ".csv"))
+  orgs_report_path <- file.path("upload reports",paste0("new_organizations_report_", timestamp, ".csv"))
+  tags_report_path <- file.path("upload reports",paste0("new_tags_report_", timestamp, ".csv"))
   
   write_csv(dataset_results, datasets_report_path)
   write_csv(resource_results, resources_report_path)
