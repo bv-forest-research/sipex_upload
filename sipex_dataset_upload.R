@@ -477,12 +477,12 @@ upload_datasets_and_resources <- function(datasets_csv_path, resources_csv_path,
     existence_check <- check_result$existence_check
     
     if (existence_check$exists) {
-      
+
       # get existing ckan id
       existing_id <- existence_check$id
       if (!is.null(existing_id)) {
         created_datasets[[dataset_id]] <- existing_id
-        
+
         # reporting
         dataset_results <- rbind(dataset_results, data.frame(
           original_id = dataset_id,
@@ -494,12 +494,12 @@ upload_datasets_and_resources <- function(datasets_csv_path, resources_csv_path,
           upload_time = format(Sys.time(), "%Y-%m-%d %H:%M:%S"),
           stringsAsFactors = FALSE
         ))
-        
+
         skipped_datasets <- skipped_datasets + 1
-        
+
         # skips resource
         next
-      } 
+      }
     }
     
     ##### description #####
@@ -675,14 +675,14 @@ upload_datasets_and_resources <- function(datasets_csv_path, resources_csv_path,
     }
     
     ##### categories ##### 
-    # dataset_groups <- c()
-    # if ("Group" %in% colnames(dataset) && !is.na(dataset[["Group"]])) {
-    #   group_text <- clean_text(dataset[["Group"]])
-    #   if (group_text != "") {
-    #     dataset_groups <- strsplit(group_text, ",")[[1]]
-    #     dataset_groups <- trimws(dataset_groups)
-    #   }
-    # }
+    dataset_groups <- c()
+    if ("Group" %in% colnames(dataset) && !is.na(dataset[["Group"]])) {
+      group_text <- clean_text(dataset[["Group"]])
+      if (group_text != "") {
+        dataset_groups <- strsplit(group_text, ",")[[1]]
+        dataset_groups <- trimws(dataset_groups)
+      }
+    }
     
     ##### metadata #####
     body <- list(
@@ -758,31 +758,31 @@ upload_datasets_and_resources <- function(datasets_csv_path, resources_csv_path,
       
       
       ##### add to groups #####
-      # if (length(dataset_groups) > 0) {
-      #   for (group_name in dataset_groups) {
-      #     if (nchar(group_name) > 0) {
-      #       group_data <- list(
-      #         id = group_name,         
-      #         object = ckan_dataset_id, 
-      #         object_type = "package",  
-      #         capacity = "public"   
-      #       )
-      #       
-      #       group_data_json <- toJSON(group_data, auto_unbox = TRUE)
-      #       
-      #       group_response <- POST(
-      #         url = paste0(ckan_url, "/api/3/action/member_create"),
-      #         add_headers("Authorization" = api_key,
-      #                     "Content-Type" = "application/json"),
-      #         body = group_data_json,
-      #         encode = "raw"
-      #       )
-      #       
-      #       # testing
-      #       # group_result <- content(group_response)
-      #     }
-      #   }
-      # }
+      if (length(dataset_groups) > 0) {
+        for (group_name in dataset_groups) {
+          if (nchar(group_name) > 0) {
+            group_data <- list(
+              id = group_name,
+              object = ckan_dataset_id,
+              object_type = "package",
+              capacity = "public"
+            )
+
+            group_data_json <- toJSON(group_data, auto_unbox = TRUE)
+
+            group_response <- POST(
+              url = paste0(ckan_url, "/api/3/action/member_create"),
+              add_headers("Authorization" = api_key,
+                          "Content-Type" = "application/json"),
+              body = group_data_json,
+              encode = "raw"
+            )
+
+            # testing
+             group_result <- content(group_response)
+          }
+        }
+      }
       
       ##### upload resources #####
       dataset_resources <- resources[resources$Dataset_ID == dataset_id, , drop = FALSE]
@@ -1004,19 +1004,19 @@ upload_datasets_and_resources <- function(datasets_csv_path, resources_csv_path,
 }
 
 # prod
-api_key_prod <- "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJsOXp3RjhjV3FsdGxuV0lfcjl3MXFIMF8xdWVHNUxHR19zamdMX0lRdUxrIiwiaWF0IjoxNzQ0MzgwNjM2fQ.WNzef0vVfmd7_Sn6viDpHdbwJrC5gsbfd3Wo4mC5kX0"
+api_key_prod <- "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 ckan_url_prod <- "https://resources.sipexchangebc.com"
 
 # staging
-api_key_stag <- "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJTb21CSWFsNEo5NEFjQnJhSHpQUUNOTXFWdjdTSG1xcDVIbDRQMHhaYURRIiwiaWF0IjoxNzQ0MzgwNTkzfQ.nppj8YhcNrwtWp-WZ09Paor7yClsHIyPZcpbUGVd95Y"
+api_key_stag <- "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 ckan_url_stag <- "http://staging-resources.sipexchangebc.com"
 
 
 api_key <- "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJadnJhRHpRR2doVW9rRXkxM2pMY2VETkY4aGVuVlh4VHRzZlZUY0ZuUjQ0IiwiaWF0IjoxNzU1MjExMjY5fQ.2uVGXM199CcGawE8agcAalFsgRfQvF89cmEGDAA6nec"
 ckan_url <- "http://localhost:5000/"
 
-datasets_csv_path <- "./datasets_b1.csv"
-resources_csv_path <- "./resources_b1.csv"
+datasets_csv_path <- "./datasets.csv"
+resources_csv_path <- "./resources.csv"
 
 # run function
 results <- upload_datasets_and_resources(datasets_csv_path, resources_csv_path, api_key, ckan_url)
