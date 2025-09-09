@@ -1012,7 +1012,7 @@ api_key_stag <- "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJTb21CSWFsNEo5NE
 ckan_url_stag <- "http://staging-resources.sipexchangebc.com"
 
 
-api_key <- "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJKZy1IMUpHRGFBNTE3RW02VnZYYXJEeUd3YUpkSEVzcjhrN3NvbXpqOEVBIiwiaWF0IjoxNzU1MTg4NjY5fQ.QilqIv2qghoxoYgs5NXOlka5369LU7NS6lNcLXxjNXg"
+api_key <- "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJadnJhRHpRR2doVW9rRXkxM2pMY2VETkY4aGVuVlh4VHRzZlZUY0ZuUjQ0IiwiaWF0IjoxNzU1MjExMjY5fQ.2uVGXM199CcGawE8agcAalFsgRfQvF89cmEGDAA6nec"
 ckan_url <- "http://localhost:5000/"
 
 datasets_csv_path <- "./datasets_b1.csv"
