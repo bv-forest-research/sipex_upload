@@ -667,6 +667,12 @@ upload_datasets_and_resources <- function(datasets_csv_path, resources_csv_path,
       desc_loc <- clean_text(dataset[["Descriptive Location"]])
     }
     
+    ##### author #####
+    author <- ""
+    if ("Author(s)" %in% colnames(dataset) && !is.na(dataset[["Author(s)"]])) {
+      author <- clean_text(dataset[["Author(s)"]])
+    }
+    
     ##### yr published ##### 
     publication_yr <- NULL
     if ("Year Published" %in% colnames(dataset)) {
@@ -688,6 +694,7 @@ upload_datasets_and_resources <- function(datasets_csv_path, resources_csv_path,
     body <- list(
       name = dataset_name,
       title = dataset_title,
+      author = author,
       notes = description,
       descriptive_location = desc_loc,
       publication_yr = publication_yr
@@ -703,6 +710,14 @@ upload_datasets_and_resources <- function(datasets_csv_path, resources_csv_path,
     
     if (length(tags) > 0) {
       body$tags <- tags
+    }
+    
+    if (author != "") {
+      body$author <- author
+    }
+    
+    if (desc_loc != "") {
+      body$descriptive_location <- desc_loc
     }
     
     if (!is.null(publication_yr)) {
@@ -1007,15 +1022,15 @@ api_key_prod <- "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 ckan_url_prod <- "https://resources.sipexchangebc.com"
 
 # staging
-api_key_stag <- "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-ckan_url_stag <- "http://staging-resources.sipexchangebc.com"
+api_key <- "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+ckan_url <- "http://staging-resources.sipexchangebc.com"
 
 # local test
-api_key <- "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-ckan_url <- "http://localhost:5000/"
+api_key_dev <- "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+ckan_url_dev <- "http://localhost:5000/"
 
-datasets_csv_path <- "./datasets.csv"
-resources_csv_path <- "./resources.csv"
+datasets_csv_path <- "./datasets_b5.csv"
+resources_csv_path <- "./resources_b5.csv"
 
 # run function
 results <- upload_datasets_and_resources(datasets_csv_path, resources_csv_path, api_key, ckan_url)
