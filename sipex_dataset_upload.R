@@ -667,6 +667,12 @@ upload_datasets_and_resources <- function(datasets_csv_path, resources_csv_path,
       desc_loc <- clean_text(dataset[["Descriptive Location"]])
     }
     
+    ##### author #####
+    author <- ""
+    if ("Author(s)" %in% colnames(dataset) && !is.na(dataset[["Author(s)"]])) {
+      author <- clean_text(dataset[["Author(s)"]])
+    }
+    
     ##### yr published ##### 
     publication_yr <- NULL
     if ("Year Published" %in% colnames(dataset)) {
@@ -688,6 +694,7 @@ upload_datasets_and_resources <- function(datasets_csv_path, resources_csv_path,
     body <- list(
       name = dataset_name,
       title = dataset_title,
+      author = author,
       notes = description,
       descriptive_location = desc_loc,
       publication_yr = publication_yr
@@ -703,6 +710,14 @@ upload_datasets_and_resources <- function(datasets_csv_path, resources_csv_path,
     
     if (length(tags) > 0) {
       body$tags <- tags
+    }
+    
+    if (author != "") {
+      body$author <- author
+    }
+    
+    if (desc_loc != "") {
+      body$descriptive_location <- desc_loc
     }
     
     if (!is.null(publication_yr)) {
