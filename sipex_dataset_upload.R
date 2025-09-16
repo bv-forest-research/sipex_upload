@@ -709,6 +709,10 @@ upload_datasets_and_resources <- function(datasets_csv_path, resources_csv_path,
       body$publication_yr <- publication_yr
     }
     
+    if (!is.null(author)) {
+      body$author <- author
+    }
+    
     # convert to json - fixes special chars issue in desc
     body_json <- toJSON(body, auto_unbox = TRUE, na = "null", pretty = TRUE)
     
