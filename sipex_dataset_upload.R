@@ -448,23 +448,23 @@ upload_datasets_and_resources <- function(datasets_csv_path, resources_csv_path,
     cat("----------------------------------------\n")
     
     # skip if already created
-    if (dataset_id %in% names(created_datasets)) {
-      skipped_datasets <- skipped_datasets + 1
+    #if (dataset_id %in% names(created_datasets)) {
+    #  skipped_datasets <- skipped_datasets + 1
       
       # reporting
-      dataset_results <- rbind(dataset_results, data.frame(
-        original_id = dataset_id,
-        title = dataset_title,
-        organization = "",
-        ckan_id = created_datasets[[dataset_id]],
-        status = "Skipped",
-        error_message = "Already created in this session",
-        upload_time = format(Sys.time(), "%Y-%m-%d %H:%M:%S"),
-        stringsAsFactors = FALSE
-      ))
+     # dataset_results <- rbind(dataset_results, data.frame(
+      #  original_id = dataset_id,
+      #  title = dataset_title,
+      #  organization = "",
+      #  ckan_id = created_datasets[[dataset_id]],
+      #  status = "Skipped",
+      #  error_message = "Already created in this session",
+      #  upload_time = format(Sys.time(), "%Y-%m-%d %H:%M:%S"),
+      #  stringsAsFactors = FALSE
+    #  ))
       
-      next
-    }
+    #  next
+    #}
     
     ##### title #####
     dataset_title <- clean_text(dataset_title)
@@ -724,10 +724,6 @@ upload_datasets_and_resources <- function(datasets_csv_path, resources_csv_path,
       body$publication_yr <- publication_yr
     }
     
-    if (!is.null(author)) {
-      body$author <- author
-    }
-    
     # convert to json - fixes special chars issue in desc
     body_json <- toJSON(body, auto_unbox = TRUE, na = "null", pretty = TRUE)
     
@@ -960,17 +956,16 @@ upload_datasets_and_resources <- function(datasets_csv_path, resources_csv_path,
       ))
       
       # write csv
-      write_csv(dataset_results, file.path("upload reports",paste0("datasets_error_report_", 
-                                        format(Sys.time(), "%Y%m%d%H%M"), ".csv")))
+      write_csv(dataset_results, paste0("datasets_error_report_", format(Sys.time(), "%Y%m%d%H%M"), ".csv"))
     }
   }
   
   # generate and export reports
   timestamp <- format(Sys.time(), "%Y%m%d%H%M")
-  datasets_report_path <- file.path("upload reports",paste0("datasets_report_", timestamp, ".csv"))
-  resources_report_path <- file.path("upload reports",paste0("resources_report_", timestamp, ".csv"))
-  orgs_report_path <- file.path("upload reports",paste0("new_organizations_report_", timestamp, ".csv"))
-  tags_report_path <- file.path("upload reports",paste0("new_tags_report_", timestamp, ".csv"))
+  datasets_report_path <- paste0("datasets_report_", timestamp, ".csv")
+  resources_report_path <- paste0("resources_report_", timestamp, ".csv")
+  orgs_report_path <- paste0("new_organizations_report_", timestamp, ".csv")
+  tags_report_path <- paste0("new_tags_report_", timestamp, ".csv")
   
   write_csv(dataset_results, datasets_report_path)
   write_csv(resource_results, resources_report_path)
@@ -1027,19 +1022,15 @@ api_key_prod <- "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 ckan_url_prod <- "https://resources.sipexchangebc.com"
 
 # staging
-api_key_stag <- "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJZaUJUemV6LU9pN1JodF9wZndjVEMxMUtacGt5OTRkMEtxa2dVRDRRVGs0IiwiaWF0IjoxNzU3NjI3MTM1fQ.JFc3mIZliqmESdjtr8J0u3JeHDwE9M9uV-y_qq7JVYI"
-ckan_url_stag <- "http://staging-resources.sipexchangebc.com"
+api_key <- "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+ckan_url <- "http://staging-resources.sipexchangebc.com"
 
-#api_key_stag <- "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJadnJhRHpRR2doVW9rRXkxM2pMY2VETkY4aGVuVlh4VHRzZlZUY0ZuUjQ0IiwiaWF0IjoxNzU1MjExMjY5fQ.2uVGXM199CcGawE8agcAalFsgRfQvF89cmEGDAA6nec"
-#ckan_url_stag <- "http://staging-resources.sipexchangebc.com"
+# local test
+api_key_dev <- "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+ckan_url_dev <- "http://localhost:5000/"
 
-datasets_csv_path <- "./datasets data/datasets_110925_test.csv"
-resources_csv_path <- "./resources data/resources_110925_test.csv"
+datasets_csv_path <- "./datasets_b5.csv"
+resources_csv_path <- "./resources_b5.csv"
 
 # run function
-results <- upload_datasets_and_resources(datasets_csv_path, resources_csv_path, 
-                                         api_key_stag, ckan_url_stag)
-
-
-
-
+results <- upload_datasets_and_resources(datasets_csv_path, resources_csv_path, api_key, ckan_url)
