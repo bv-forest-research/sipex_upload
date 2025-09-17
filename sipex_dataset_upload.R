@@ -329,6 +329,51 @@ fetch_and_check_datasets <- function(api_key, ckan_url, dataset_title = NULL, da
   ))
 }
 
+
+is_url <- function(path) {
+  if (is.na(path) || is.null(path) || path == "") {
+    return(FALSE)
+  }
+  
+  path <- trimws(as.character(path))
+  
+  url_patterns <- c(
+    "^https?://",           
+    "^ftp://",              
+    "^ftps://",             
+    "^sftp://"              
+  )
+  
+  for (pattern in url_patterns) {
+    if (grepl(pattern, path, ignore.case = TRUE)) {
+      return(TRUE)
+    }
+  }
+  
+  # check for www
+  if (grepl("^www\\.", path, ignore.case = TRUE)) {
+    return(TRUE)
+  }
+  
+  # detects: domain.tld, domain.tld/path, subdomain.domain.tld
+  domain_patterns <- c(
+    # domains with path
+    "^[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}/",
+    # others
+    "^[a-zA-Z0-9.-]+\\.(com|org|net|edu|gov|info|biz|co|io|ca|uk|de|fr|au|jp|cn|ru|br|mx|in|it|es|nl|se|no|dk|fi|pl|cz|sk|hu|ro|bg|hr|si|ee|lv|lt|gr|pt|ie|lu|mt|cy|be|at|ch|li)($|\\?|#)"
+  )
+  
+  for (pattern in domain_patterns) {
+    if (grepl(pattern, path, ignore.case = TRUE)) {
+      return(TRUE)
+    }
+  }
+  
+  return(FALSE)
+}
+
+
+
 # create dataset and upload resources
 upload_datasets_and_resources <- function(datasets_csv_path, resources_csv_path, api_key, ckan_url) {
   
@@ -431,31 +476,31 @@ upload_datasets_and_resources <- function(datasets_csv_path, resources_csv_path,
     check_result <- fetch_and_check_datasets(api_key, ckan_url, dataset_title, dataset_name)
     existence_check <- check_result$existence_check
     
-   # if (existence_check$exists) {
-      
+    if (existence_check$exists) {
+
       # get existing ckan id
-    #  existing_id <- existence_check$id
-    #  if (!is.null(existing_id)) {
-    #    created_datasets[[dataset_id]] <- existing_id
-        
+      existing_id <- existence_check$id
+      if (!is.null(existing_id)) {
+        created_datasets[[dataset_id]] <- existing_id
+
         # reporting
-    #    dataset_results <- rbind(dataset_results, data.frame(
-     #     original_id = dataset_id,
-    #      title = dataset_title,
-    #      organization = "",
-    #      ckan_id = existing_id,
-    #      status = paste0("Existing (", existence_check$match_type, " match)"),
-    #      error_message = "",
-    #      upload_time = format(Sys.time(), "%Y-%m-%d %H:%M:%S"),
-    #      stringsAsFactors = FALSE
-    #    ))
-        
-    #    skipped_datasets <- skipped_datasets + 1
-        
+        dataset_results <- rbind(dataset_results, data.frame(
+          original_id = dataset_id,
+          title = dataset_title,
+          organization = "",
+          ckan_id = existing_id,
+          status = paste0("Existing (", existence_check$match_type, " match)"),
+          error_message = "",
+          upload_time = format(Sys.time(), "%Y-%m-%d %H:%M:%S"),
+          stringsAsFactors = FALSE
+        ))
+
+        skipped_datasets <- skipped_datasets + 1
+
         # skips resource
-    #    next
-    #  } 
-    #}
+        next
+      }
+    }
     
     ##### description #####
     description <- ""
@@ -616,6 +661,25 @@ upload_datasets_and_resources <- function(datasets_csv_path, resources_csv_path,
       }
     }
     
+    ##### descriptive location ##### 
+    desc_loc <- ""
+    if ("Descriptive Location" %in% colnames(dataset) && !is.na(dataset[["Descriptive Location"]])) {
+      desc_loc <- clean_text(dataset[["Descriptive Location"]])
+    }
+    
+    ##### author #####
+    author <- ""
+    if ("Author(s)" %in% colnames(dataset) && !is.na(dataset[["Author(s)"]])) {
+      author <- clean_text(dataset[["Author(s)"]])
+    }
+    
+    ##### author contact#####
+    auth_cont <- ""
+    if ("Author contact" %in% colnames(dataset) && !is.na(dataset[["Author contact"]])) {
+      auth_cont <- clean_text(dataset[["Author contact"]])
+    }
+    
+    
     ##### yr published ##### 
     publication_yr <- NULL
     if ("Year Published" %in% colnames(dataset)) {
@@ -637,8 +701,11 @@ upload_datasets_and_resources <- function(datasets_csv_path, resources_csv_path,
     body <- list(
       name = dataset_name,
       title = dataset_title,
+      author = author,
+      auth_cont = auth_cont,
       notes = description,
-      publication_yr = 2025
+      descriptive_location = desc_loc,
+      publication_yr = publication_yr
     )
     
     if (!is.null(org_id)) {
@@ -651,6 +718,18 @@ upload_datasets_and_resources <- function(datasets_csv_path, resources_csv_path,
     
     if (length(tags) > 0) {
       body$tags <- tags
+    }
+    
+    if (author != "") {
+      body$author <- author
+    }
+    
+    if (auth_cont != "") {
+      body$auth_cont <- auth_cont
+    }
+    
+    if (desc_loc != "") {
+      body$descriptive_location <- desc_loc
     }
     
     if (!is.null(publication_yr)) {
@@ -710,14 +789,14 @@ upload_datasets_and_resources <- function(datasets_csv_path, resources_csv_path,
         for (group_name in dataset_groups) {
           if (nchar(group_name) > 0) {
             group_data <- list(
-              id = group_name,         
-              object = ckan_dataset_id, 
-              object_type = "package",  
-              capacity = "public"   
+              id = group_name,
+              object = ckan_dataset_id,
+              object_type = "package",
+              capacity = "public"
             )
-            
+
             group_data_json <- toJSON(group_data, auto_unbox = TRUE)
-            
+
             group_response <- POST(
               url = paste0(ckan_url, "/api/3/action/member_create"),
               add_headers("Authorization" = api_key,
@@ -725,9 +804,9 @@ upload_datasets_and_resources <- function(datasets_csv_path, resources_csv_path,
               body = group_data_json,
               encode = "raw"
             )
-            
+
             # testing
-            # group_result <- content(group_response)
+             group_result <- content(group_response)
           }
         }
       }
@@ -759,60 +838,75 @@ upload_datasets_and_resources <- function(datasets_csv_path, resources_csv_path,
             resource_data$format <- clean_text(resource[["format"]])
           }
           
-          # based on file type
-          if ("Path" %in% colnames(resource) && !is.na(resource[["Path"]])) {
-            file_path <- paste0("resources/", resource[["Path"]])
+          if ("Path" %in% colnames(resource) && !is.na(resource[["Path"]]) && resource[["Path"]] != "") {
+            path_value <- resource[["Path"]]
             
-            # files not url link
-            if (file.exists(file_path)) {
-              extension <- tolower(tools::file_ext(file_path))
-              mime_type <- switch(extension,
-                                  "pdf" = "application/pdf",
-                                  "csv" = "text/csv",
-                                  "xlsx" = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                                  "json" = "application/json",
-                                  "application/octet-stream")
+            if (is_url(path_value)) {
+              ##### url resource #####
+              resource_data$url <- clean_text(path_value)
               
-              resource_data$upload <- upload_file(file_path, mime_type)
+              resource_data_json <- toJSON(resource_data, auto_unbox = TRUE)
+              
+              cat("  Processing URL resource:", resource_name, "->", path_value, "\n")
               
               resource_response <- POST(
                 url = paste0(ckan_url, "/api/3/action/resource_create"),
-                add_headers("Authorization" = api_key),
-                body = resource_data,
-                encode = "multipart"
+                add_headers("Authorization" = api_key,
+                            "Content-Type" = "application/json"),
+                body = resource_data_json,
+                encode = "raw"
               )
               
               processed_resources <- processed_resources + 1
+              
             } else {
-              cat("  File not found:", file_path, "\n")
-              next
+              ##### others #####
+              file_path <- paste0("resources/", path_value)
+              
+              if (file.exists(file_path)) {
+                extension <- tolower(tools::file_ext(file_path))
+                mime_type <- switch(extension,
+                                    "pdf" = "application/pdf",
+                                    "csv" = "text/csv",
+                                    "xlsx" = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                                    "xls" = "application/vnd.ms-excel",
+                                    "json" = "application/json",
+                                    "xml" = "application/xml",
+                                    "txt" = "text/plain",
+                                    "zip" = "application/zip",
+                                    "doc" = "application/msword",
+                                    "docx" = "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                                    "application/octet-stream")
+                
+                resource_data$upload <- upload_file(file_path, mime_type)
+                
+                resource_response <- POST(
+                  url = paste0(ckan_url, "/api/3/action/resource_create"),
+                  add_headers("Authorization" = api_key),
+                  body = resource_data,
+                  encode = "multipart"
+                )
+                
+                processed_resources <- processed_resources + 1
+                
+              } else {
+                cat("File not found:", file_path, "\n")
+                failed_resources <- failed_resources + 1
+                next
+              }
             }
-          } else if ("url" %in% colnames(resource) && !is.na(resource[["url"]])) {
-            # url resouce
-            resource_data$url <- clean_text(resource[["url"]])
-            
-            resource_data_json <- toJSON(resource_data, auto_unbox = TRUE)
-            
-            resource_response <- POST(
-              url = paste0(ckan_url, "/api/3/action/resource_create"),
-              add_headers("Authorization" = api_key,
-                          "Content-Type" = "application/json"),
-              body = resource_data_json,
-              encode = "raw"
-            )
-            
-            processed_resources <- processed_resources + 1
           } else {
-            # skip if not url
+            cat("No Path specified for resource:", resource_name, "\n")
             next
           }
           
-          # reporting
           resource_result <- content(resource_response)
           
           if (is.list(resource_result) && !is.null(resource_result$success) && resource_result$success == TRUE) {
             resource_result_id <- resource_result$result$id
             successful_resources <- successful_resources + 1
+            
+            cat("  ✓ Success:", resource_name, "\n")
             
             resource_results <- rbind(resource_results, data.frame(
               original_id = resource_id,
@@ -826,11 +920,18 @@ upload_datasets_and_resources <- function(datasets_csv_path, resources_csv_path,
             ))
           } else {
             # failed
-            cat("  Resource upload failed\n")
+            cat("  ✗ Failed:", resource_name, "\n")
             failed_resources <- failed_resources + 1
             
-            # add error message
-            error_msg <- if (!is.null(resource_result$error)) toJSON(resource_result$error) else "Unknown error"
+            # get error message
+            error_msg <- "Unknown error"
+            if (!is.null(resource_result$error)) {
+              if (is.list(resource_result$error)) {
+                error_msg <- toJSON(resource_result$error, auto_unbox = TRUE)
+              } else {
+                error_msg <- as.character(resource_result$error)
+              }
+            }
             
             resource_results <- rbind(resource_results, data.frame(
               original_id = resource_id,
@@ -839,7 +940,7 @@ upload_datasets_and_resources <- function(datasets_csv_path, resources_csv_path,
               ckan_id = "",
               status = "Failed",
               error_message = error_msg,
-              upload_time = format(Sys.time(), "%Y-%m-%d %H:%M"),
+              upload_time = format(Sys.time(), "%Y-%m-%d %H:%M:%S"),
               stringsAsFactors = FALSE
             ))
           }
@@ -929,15 +1030,19 @@ upload_datasets_and_resources <- function(datasets_csv_path, resources_csv_path,
 }
 
 # prod
-api_key_prod <- "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJsOXp3RjhjV3FsdGxuV0lfcjl3MXFIMF8xdWVHNUxHR19zamdMX0lRdUxrIiwiaWF0IjoxNzQ0MzgwNjM2fQ.WNzef0vVfmd7_Sn6viDpHdbwJrC5gsbfd3Wo4mC5kX0"
+api_key_prod <- "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 ckan_url_prod <- "https://resources.sipexchangebc.com"
 
 # staging
-api_key <- "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJTb21CSWFsNEo5NEFjQnJhSHpQUUNOTXFWdjdTSG1xcDVIbDRQMHhaYURRIiwiaWF0IjoxNzQ0MzgwNTkzfQ.nppj8YhcNrwtWp-WZ09Paor7yClsHIyPZcpbUGVd95Y"
+api_key <- "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJlOXo1UkZzenNSbGlJRUVpUDNLQkItTnJFR3BpZnowbUpidlNidllrYzVjIiwiaWF0IjoxNzU3NjM1MjU4fQ.2Rlc0nCcYalAZB9wJPdOzbjI3rOax_SxCWaWv4R4_mY"
 ckan_url <- "http://staging-resources.sipexchangebc.com"
 
-datasets_csv_path <- "./datasets.csv"
-resources_csv_path <- "./resources.csv"
+# local test
+api_key_dev <- "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+ckan_url_dev <- "http://localhost:5000/"
+
+datasets_csv_path <- "./datasets data/cop_datasets_160925_test.csv"
+resources_csv_path <- "./resources data/cop_resources_160925_test.csv"
 
 # run function
 results <- upload_datasets_and_resources(datasets_csv_path, resources_csv_path, api_key, ckan_url)

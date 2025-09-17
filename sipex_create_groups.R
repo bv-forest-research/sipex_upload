@@ -13,6 +13,7 @@ create_ckan_groups <- function(groups_csv_path, api_key, ckan_url) {
   group_results <- data.frame(
     name = character(),
     title = character(),
+    csv_id = character(),
     status = character(),
     ckan_id = character(),
     error_message = character(),
@@ -42,14 +43,12 @@ create_ckan_groups <- function(groups_csv_path, api_key, ckan_url) {
     group_title <- if ("Title" %in% colnames(group)) clean_text(group[["Title"]]) else paste("Group", i)
     group_description <- if ("Description" %in% colnames(group)) clean_text(group[["Description"]]) else ""
     
-    # create slug - FIXED to handle capital letters properly
-    # First convert to lowercase, then replace non-alphanumeric with hyphens
-    group_slug <- tolower(group_title)
-    group_slug <- gsub("[^a-z0-9]+", "-", group_slug)
-    group_slug <- gsub("^-+|-+$", "", group_slug)  
+    csv_id <- as.character(group[["Group ID"]])
+    group_slug <- clean_slug(csv_id)
     
     cat("\n----------------------------------------\n")
     cat("Processing group:", group_title, "\n")
+    cat("CSV ID:", csv_id, "\n")
     cat("Group slug:", group_slug, "\n")
     
     # skip if exists
@@ -61,6 +60,7 @@ create_ckan_groups <- function(groups_csv_path, api_key, ckan_url) {
       group_results <- rbind(group_results, data.frame(
         name = group_slug,
         title = group_title,
+        csv_id = csv_id,
         status = "Skipped (already exists)",
         ckan_id = existing_id,
         error_message = "",
@@ -116,6 +116,7 @@ create_ckan_groups <- function(groups_csv_path, api_key, ckan_url) {
       group_results <- rbind(group_results, data.frame(
         name = group_slug,
         title = group_title,
+        csv_id = csv_id,
         status = "Success",
         ckan_id = ckan_group_id,
         error_message = "",
@@ -132,6 +133,7 @@ create_ckan_groups <- function(groups_csv_path, api_key, ckan_url) {
       group_results <- rbind(group_results, data.frame(
         name = group_slug,
         title = group_title,
+        csv_id = csv_id,
         status = "Failed",
         ckan_id = "",
         error_message = error_msg,
@@ -198,6 +200,21 @@ create_slug <- function(title, existing_names = character(0)) {
   return(slug)
 }
 
+# clean slug from CSV ID
+clean_slug <- function(id_value) {
+  if (is.na(id_value) || is.null(id_value)) return("")
+  
+  slug <- as.character(id_value)
+  slug <- trimws(slug)
+  
+  # Convert to lowercase and replace non-alphanumeric with hyphens
+  slug <- tolower(slug)
+  slug <- gsub("[^a-z0-9]+", "-", slug)
+  slug <- gsub("^-+|-+$", "", slug)
+  
+  return(slug)
+}
+
 # clean
 clean_text <- function(text) {
   if (is.na(text) || is.null(text)) return("")
@@ -210,12 +227,16 @@ clean_text <- function(text) {
 }
 
 # prod
-api_key_prod <- "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJsOXp3RjhjV3FsdGxuV0lfcjl3MXFIMF8xdWVHNUxHR19zamdMX0lRdUxrIiwiaWF0IjoxNzQ0MzgwNjM2fQ.WNzef0vVfmd7_Sn6viDpHdbwJrC5gsbfd3Wo4mC5kX0"
+api_key_prod <- "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 ckan_url_prod <- "https://resources.sipexchangebc.com"
 
 # staging
-api_key <- "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJTb21CSWFsNEo5NEFjQnJhSHpQUUNOTXFWdjdTSG1xcDVIbDRQMHhaYURRIiwiaWF0IjoxNzQ0MzgwNTkzfQ.nppj8YhcNrwtWp-WZ09Paor7yClsHIyPZcpbUGVd95Y"
-ckan_url <- "http://staging-resources.sipexchangebc.com"
+api_key_stag <- "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+ckan_url_stag <- "http://staging-resources.sipexchangebc.com"
+
+# local test
+api_key <- "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+ckan_url <- "http://localhost:5000/"
 
 groups_csv_path <- "groups.csv"
 
