@@ -673,6 +673,13 @@ upload_datasets_and_resources <- function(datasets_csv_path, resources_csv_path,
       author <- clean_text(dataset[["Author(s)"]])
     }
     
+    ##### author contact#####
+    auth_cont <- ""
+    if ("Author contact" %in% colnames(dataset) && !is.na(dataset[["Author contact"]])) {
+      auth_cont <- clean_text(dataset[["Author contact"]])
+    }
+    
+    
     ##### yr published ##### 
     publication_yr <- NULL
     if ("Year Published" %in% colnames(dataset)) {
@@ -695,6 +702,7 @@ upload_datasets_and_resources <- function(datasets_csv_path, resources_csv_path,
       name = dataset_name,
       title = dataset_title,
       author = author,
+      auth_cont = auth_cont,
       notes = description,
       descriptive_location = desc_loc,
       publication_yr = publication_yr
@@ -714,6 +722,10 @@ upload_datasets_and_resources <- function(datasets_csv_path, resources_csv_path,
     
     if (author != "") {
       body$author <- author
+    }
+    
+    if (auth_cont != "") {
+      body$auth_cont <- auth_cont
     }
     
     if (desc_loc != "") {
@@ -1022,15 +1034,15 @@ api_key_prod <- "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 ckan_url_prod <- "https://resources.sipexchangebc.com"
 
 # staging
-api_key <- "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+api_key <- "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJlOXo1UkZzenNSbGlJRUVpUDNLQkItTnJFR3BpZnowbUpidlNidllrYzVjIiwiaWF0IjoxNzU3NjM1MjU4fQ.2Rlc0nCcYalAZB9wJPdOzbjI3rOax_SxCWaWv4R4_mY"
 ckan_url <- "http://staging-resources.sipexchangebc.com"
 
 # local test
 api_key_dev <- "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 ckan_url_dev <- "http://localhost:5000/"
 
-datasets_csv_path <- "./datasets_b5.csv"
-resources_csv_path <- "./resources_b5.csv"
+datasets_csv_path <- "./datasets data/cop_datasets_160925_test.csv"
+resources_csv_path <- "./resources data/cop_resources_160925_test.csv"
 
 # run function
 results <- upload_datasets_and_resources(datasets_csv_path, resources_csv_path, api_key, ckan_url)
