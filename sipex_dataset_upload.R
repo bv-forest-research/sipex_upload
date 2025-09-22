@@ -435,8 +435,8 @@ upload_datasets_and_resources <- function(datasets_csv_path, resources_csv_path,
     dataset <- datasets[i, ]
     
     # get ID and Title
-      dataset_id <- as.character(if ("ID" %in% colnames(dataset)) dataset[["ID"]] else i)
-      dataset_title <- as.character(if ("Title" %in% colnames(dataset)) dataset[["Title"]] else paste("Dataset", dataset_id))
+    dataset_id <- as.character(if ("ID" %in% colnames(dataset)) dataset[["ID"]] else i)
+    dataset_title <- as.character(if ("Title" %in% colnames(dataset)) dataset[["Title"]] else paste("Dataset", dataset_id))
     
     # print reporting
     fin_datasets <- fin_datasets + 1
@@ -450,19 +450,19 @@ upload_datasets_and_resources <- function(datasets_csv_path, resources_csv_path,
     # skip if already created
     #if (dataset_id %in% names(created_datasets)) {
     #  skipped_datasets <- skipped_datasets + 1
-      
-      # reporting
-     # dataset_results <- rbind(dataset_results, data.frame(
-      #  original_id = dataset_id,
-      #  title = dataset_title,
-      #  organization = "",
-      #  ckan_id = created_datasets[[dataset_id]],
-      #  status = "Skipped",
-      #  error_message = "Already created in this session",
-      #  upload_time = format(Sys.time(), "%Y-%m-%d %H:%M:%S"),
-      #  stringsAsFactors = FALSE
+    
+    # reporting
+    # dataset_results <- rbind(dataset_results, data.frame(
+    #  original_id = dataset_id,
+    #  title = dataset_title,
+    #  organization = "",
+    #  ckan_id = created_datasets[[dataset_id]],
+    #  status = "Skipped",
+    #  error_message = "Already created in this session",
+    #  upload_time = format(Sys.time(), "%Y-%m-%d %H:%M:%S"),
+    #  stringsAsFactors = FALSE
     #  ))
-      
+    
     #  next
     #}
     
@@ -477,12 +477,12 @@ upload_datasets_and_resources <- function(datasets_csv_path, resources_csv_path,
     existence_check <- check_result$existence_check
     
     if (existence_check$exists) {
-
+      
       # get existing ckan id
       existing_id <- existence_check$id
       if (!is.null(existing_id)) {
         created_datasets[[dataset_id]] <- existing_id
-
+        
         # reporting
         dataset_results <- rbind(dataset_results, data.frame(
           original_id = dataset_id,
@@ -494,9 +494,9 @@ upload_datasets_and_resources <- function(datasets_csv_path, resources_csv_path,
           upload_time = format(Sys.time(), "%Y-%m-%d %H:%M:%S"),
           stringsAsFactors = FALSE
         ))
-
+        
         skipped_datasets <- skipped_datasets + 1
-
+        
         # skips resource
         next
       }
@@ -647,10 +647,30 @@ upload_datasets_and_resources <- function(datasets_csv_path, resources_csv_path,
     if ("License" %in% colnames(dataset) && !is.na(dataset[["License"]])) {
       # map license names
       license_map <- list(
-        "Open Data Commons Attribution License" = "odc-by",
-        "Creative Commons Attribution" = "cc-by",
-        "Public Domain" = "odc-pddl",
-        "Creative Commons Attribution Share-Alike" = "cc-by-sa"
+        "Creative Commons Attribution" = "CC-BY",
+        "Creative Commons CCZero" = "CC0", 
+        "Creative Commons Attribution-NonCommercial" = "CC-BY-NC",
+        "Creative Commons Non-Commercial" = "CC BY-NC",
+        "Creative Commons Attribution-NonCommercial-NoDerivatives" = "CC-BY-NC-ND",
+        "Creative Commons Attribution-NonCommercial-ShareAlike" = "CC-BY-NC-SA",
+        "Open Data Commons Attribution License" = "ODC-BY",
+        "Open Data Commons Open Database License" = "ODbL",
+        "Open Data Commons Public Domain Dedication and License" = "PDDL",
+        "Open Government Licence – BC" = "OGL-BC",
+        "Open Government Licence - Canada" = "OGL-CA", 
+        "Other (Not open); Crown copyright (Province of British Columbia), all rights reserved" = "crown-copyright-ca",
+        "License Not Specified" = "notspecified",
+        "Other (Attribution)" = "other-at",
+        "Other (Not open)" = "other-closed", 
+        "Other (Open)" = "other-open",
+        "Other (Public Domain)" = "other-pd",
+        "Other (Non-commercial)" = "other-nc",
+        "License not specified" = "notspecified",
+        "Not specified" = "notspecified",
+        "CC-BY" = "CC-BY",
+        "CC0" = "CC0",
+        "Public Domain" = "other-pd",
+        "Attribution" = "other-at"
       )
       
       license_name <- clean_text(dataset[["License"]])
@@ -673,12 +693,11 @@ upload_datasets_and_resources <- function(datasets_csv_path, resources_csv_path,
       author <- clean_text(dataset[["Author(s)"]])
     }
     
-    ##### author contact#####
+    ##### author contact #####
     auth_cont <- ""
-    if ("Author contact" %in% colnames(dataset) && !is.na(dataset[["Author contact"]])) {
-      auth_cont <- clean_text(dataset[["Author contact"]])
+    if ("Author Contact" %in% colnames(dataset) && !is.na(dataset[["Author Contact"]])) {
+      auth_cont <- clean_text(dataset[["Author Contact"]])
     }
-    
     
     ##### yr published ##### 
     publication_yr <- NULL
@@ -702,7 +721,7 @@ upload_datasets_and_resources <- function(datasets_csv_path, resources_csv_path,
       name = dataset_name,
       title = dataset_title,
       author = author,
-      auth_cont = auth_cont,
+      author_email = auth_cont,
       notes = description,
       descriptive_location = desc_loc,
       publication_yr = publication_yr
@@ -725,7 +744,7 @@ upload_datasets_and_resources <- function(datasets_csv_path, resources_csv_path,
     }
     
     if (auth_cont != "") {
-      body$auth_cont <- auth_cont
+      body$author_email <- auth_cont
     }
     
     if (desc_loc != "") {
@@ -794,9 +813,9 @@ upload_datasets_and_resources <- function(datasets_csv_path, resources_csv_path,
               object_type = "package",
               capacity = "public"
             )
-
+            
             group_data_json <- toJSON(group_data, auto_unbox = TRUE)
-
+            
             group_response <- POST(
               url = paste0(ckan_url, "/api/3/action/member_create"),
               add_headers("Authorization" = api_key,
@@ -804,9 +823,9 @@ upload_datasets_and_resources <- function(datasets_csv_path, resources_csv_path,
               body = group_data_json,
               encode = "raw"
             )
-
+            
             # testing
-             group_result <- content(group_response)
+            group_result <- content(group_response)
           }
         }
       }
@@ -1034,15 +1053,15 @@ api_key_prod <- "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 ckan_url_prod <- "https://resources.sipexchangebc.com"
 
 # staging
-api_key <- "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJlOXo1UkZzenNSbGlJRUVpUDNLQkItTnJFR3BpZnowbUpidlNidllrYzVjIiwiaWF0IjoxNzU3NjM1MjU4fQ.2Rlc0nCcYalAZB9wJPdOzbjI3rOax_SxCWaWv4R4_mY"
-ckan_url <- "http://staging-resources.sipexchangebc.com"
+api_key_stag <- "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+ckan_url_stag <- "http://staging-resources.sipexchangebc.com"
 
 # local test
-api_key_dev <- "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-ckan_url_dev <- "http://localhost:5000/"
+api_key <- "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+ckan_url <- "http://localhost:5000/"
 
-datasets_csv_path <- "./datasets data/cop_datasets_160925_test.csv"
-resources_csv_path <- "./resources data/cop_resources_160925_test.csv"
+datasets_csv_path <- "./datasets_b5.csv"
+resources_csv_path <- "./resources_b5.csv"
 
 # run function
 results <- upload_datasets_and_resources(datasets_csv_path, resources_csv_path, api_key, ckan_url)
