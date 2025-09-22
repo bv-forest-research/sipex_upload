@@ -649,28 +649,15 @@ upload_datasets_and_resources <- function(datasets_csv_path, resources_csv_path,
       license_map <- list(
         "Creative Commons Attribution" = "CC-BY",
         "Creative Commons CCZero" = "CC0", 
-        "Creative Commons Attribution-NonCommercial" = "CC-BY-NC",
         "Creative Commons Non-Commercial" = "CC BY-NC",
-        "Creative Commons Attribution-NonCommercial-NoDerivatives" = "CC-BY-NC-ND",
-        "Creative Commons Attribution-NonCommercial-ShareAlike" = "CC-BY-NC-SA",
         "Open Data Commons Attribution License" = "ODC-BY",
-        "Open Data Commons Open Database License" = "ODbL",
-        "Open Data Commons Public Domain Dedication and License" = "PDDL",
-        "Open Government Licence – BC" = "OGL-BC",
-        "Open Government Licence - Canada" = "OGL-CA", 
         "Other (Not open); Crown copyright (Province of British Columbia), all rights reserved" = "crown-copyright-ca",
-        "License Not Specified" = "notspecified",
         "Other (Attribution)" = "other-at",
         "Other (Not open)" = "other-closed", 
         "Other (Open)" = "other-open",
         "Other (Public Domain)" = "other-pd",
         "Other (Non-commercial)" = "other-nc",
-        "License not specified" = "notspecified",
-        "Not specified" = "notspecified",
-        "CC-BY" = "CC-BY",
-        "CC0" = "CC0",
-        "Public Domain" = "other-pd",
-        "Attribution" = "other-at"
+        "License not specified" = "notspecified"
       )
       
       license_name <- clean_text(dataset[["License"]])
