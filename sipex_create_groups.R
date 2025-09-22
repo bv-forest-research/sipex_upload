@@ -231,12 +231,12 @@ api_key_prod <- "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 ckan_url_prod <- "https://resources.sipexchangebc.com"
 
 # staging
-api_key_stag <- "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-ckan_url_stag <- "http://staging-resources.sipexchangebc.com"
+api_key <- "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+ckan_url <- "http://staging-resources.sipexchangebc.com"
 
 # local test
-api_key <- "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-ckan_url <- "http://localhost:5000/"
+api_key_d <- "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+ckan_url_d <- "http://localhost:5000/"
 
 groups_csv_path <- "groups.csv"
 
