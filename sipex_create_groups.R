@@ -231,8 +231,8 @@ api_key_prod <- "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 ckan_url_prod <- "https://resources.sipexchangebc.com"
 
 # staging
-api_key <- "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-ckan_url <- "http://staging-resources.sipexchangebc.com"
+api_key_stag <- "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJlOXo1UkZzenNSbGlJRUVpUDNLQkItTnJFR3BpZnowbUpidlNidllrYzVjIiwiaWF0IjoxNzU3NjM1MjU4fQ.2Rlc0nCcYalAZB9wJPdOzbjI3rOax_SxCWaWv4R4_mY"
+ckan_url_stag <- "http://staging-resources.sipexchangebc.com"
 
 # local test
 api_key_d <- "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
