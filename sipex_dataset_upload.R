@@ -650,7 +650,7 @@ upload_datasets_and_resources <- function(datasets_csv_path, resources_csv_path,
         "Creative Commons Attribution" = "CC-BY",
         "Creative Commons CCZero" = "CC0", 
         "Creative Commons Non-Commercial" = "CC BY-NC",
-        "Open Data Commons Attribution License" = "ODC-BY",
+        "Open Data Commons" = "ODC-BY",
         "Other (Not open); Crown copyright (Province of British Columbia), all rights reserved" = "crown-copyright-ca",
         "Other (Attribution)" = "other-at",
         "Other (Not open)" = "other-closed", 
@@ -851,6 +851,10 @@ upload_datasets_and_resources <- function(datasets_csv_path, resources_csv_path,
               ##### url resource #####
               resource_data$url <- clean_text(path_value)
               
+              if (is.null(resource_data$format) || resource_data$format == "" || is.na(resource_data$format)) {
+                resource_data$format <- "html"
+              }
+              
               resource_data_json <- toJSON(resource_data, auto_unbox = TRUE)
               
               cat("  Processing URL resource:", resource_name, "->", path_value, "\n")
@@ -1040,12 +1044,12 @@ api_key_prod <- "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 ckan_url_prod <- "https://resources.sipexchangebc.com"
 
 # staging
-api_key_stag <- "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-ckan_url_stag <- "http://staging-resources.sipexchangebc.com"
+api_key <- "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJleW10aTFZZHZMSmRDc21Xd2p3QzhfRzZIQmpRaEVYSlFCSVVWN0VBMzJBIiwiaWF0IjoxNzU4NTU0NTY3fQ.a_JVgUlMWkg11SpK9vHJyFP5l6KNPmi6GQCZNzoPsmg"
+ckan_url <- "http://staging-resources.sipexchangebc.com"
 
 # local test
-api_key <- "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-ckan_url <- "http://localhost:5000/"
+api_key_dev <- "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+ckan_url_dev <- "http://localhost:5000/"
 
 datasets_csv_path <- "./datasets_b5.csv"
 resources_csv_path <- "./resources_b5.csv"
