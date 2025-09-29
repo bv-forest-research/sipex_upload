@@ -1044,15 +1044,15 @@ api_key_prod <- "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 ckan_url_prod <- "https://resources.sipexchangebc.com"
 
 # staging
-api_key <- "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJleW10aTFZZHZMSmRDc21Xd2p3QzhfRzZIQmpRaEVYSlFCSVVWN0VBMzJBIiwiaWF0IjoxNzU4NTU0NTY3fQ.a_JVgUlMWkg11SpK9vHJyFP5l6KNPmi6GQCZNzoPsmg"
-ckan_url <- "http://staging-resources.sipexchangebc.com"
+api_key_stag <- "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJleW10aTFZZHZMSmRDc21Xd2p3QzhfRzZIQmpRaEVYSlFCSVVWN0VBMzJBIiwiaWF0IjoxNzU4NTU0NTY3fQ.a_JVgUlMWkg11SpK9vHJyFP5l6KNPmi6GQCZNzoPsmg"
+ckan_url_stag <- "http://staging-resources.sipexchangebc.com"
 
 # local test
 api_key_dev <- "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 ckan_url_dev <- "http://localhost:5000/"
 
-datasets_csv_path <- "./datasets data/cop_datasets_220925_test.csv"
-resources_csv_path <- "./resources data/cop_resources_220925_test.csv"
+datasets_csv_path <- "./datasets data/datasets_250925_test.csv"
+resources_csv_path <- "./resources data/resources_250925_test.csv"
 
 # run function
 results <- upload_datasets_and_resources(datasets_csv_path, resources_csv_path, 
