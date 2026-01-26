@@ -77,11 +77,33 @@ fetch_check_create_organization <- function(api_key, ckan_url, org_name = NULL) 
     stringsAsFactors = FALSE
   )
   
-  # list orgs
-  org_list <- organization_list(limit = 1000)
+  # using offset to fetch ALL datasets - ckan has a 25 limit for orgs
+  all_orgs <- list()
+  offset <- 0
   
-  if (length(org_list) > 0) {
-    for (org in org_list) {
+  repeat {
+    response <- GET(
+      url = paste0(ckan_url, "/api/3/action/organization_list?all_fields=true&limit=25&offset=", offset),
+      add_headers("Authorization" = api_key)
+    )
+    
+    result <- content(response)
+    
+    if (!is.null(result$success) && result$success && length(result$result) > 0) {
+      batch <- result$result
+      all_orgs <- c(all_orgs, batch)
+      
+      # if res is less than 25. end 
+      if (length(batch) < 25) break
+      
+      offset <- offset + 25
+    } else {
+      break
+    }
+  }
+  
+  if (length(all_orgs) > 0) {
+    for (org in all_orgs) {
       name <- org$name
       title <- org$title
       id <- org$id
@@ -96,6 +118,8 @@ fetch_check_create_organization <- function(api_key, ckan_url, org_name = NULL) 
         organizations$ids[[paste0("title_", mod_title)]] <- id
       }
     }
+  } else {
+    cat("Warning: No organizations found\n")
   }
   
   if (is.null(org_name) || org_name == "") {
