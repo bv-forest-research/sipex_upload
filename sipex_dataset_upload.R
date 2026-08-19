@@ -1079,8 +1079,8 @@ datasets_csv_path <- "./datasets data/datasets_190126.csv"
 resources_csv_path <- "./resources data/resources_190126.csv"
 
 # run function
-results <- upload_datasets_and_resources(datasets_csv_path, resources_csv_path, 
-                                         api_key_stag, ckan_url_stag)
+#results <- upload_datasets_and_resources(datasets_csv_path, resources_csv_path, 
+ #                                        api_key_stag, ckan_url_stag)
 
 results <- upload_datasets_and_resources(datasets_csv_path, resources_csv_path, 
                                          api_key_prod, ckan_url_prod)
