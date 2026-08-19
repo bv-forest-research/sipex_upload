@@ -227,12 +227,13 @@ clean_text <- function(text) {
 }
 
 # prod
-api_key_prod <- "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-ckan_url_prod <- "https://resources.sipexchangebc.com"
+api_key <- "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJmdFRwWWF4akI3bDBHS1BaYlhiOUp1bTNsMzZlSGNJR3d5VHR2Qy1Hb2dNIiwiaWF0IjoxNzU4MDU0ODM1fQ.R_avMA4_9f7vssBBL5Omq7Di78QAEzm12emBGIxNmwg"
+ckan_url <- "https://resources.sipexchangebc.com"
 
 # staging
 api_key_stag <- "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJlOXo1UkZzenNSbGlJRUVpUDNLQkItTnJFR3BpZnowbUpidlNidllrYzVjIiwiaWF0IjoxNzU3NjM1MjU4fQ.2Rlc0nCcYalAZB9wJPdOzbjI3rOax_SxCWaWv4R4_mY"
 ckan_url_stag <- "http://staging-resources.sipexchangebc.com"
+
 
 # local test
 api_key_d <- "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
