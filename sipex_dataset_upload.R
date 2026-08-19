@@ -5,6 +5,8 @@ library(lubridate)
 library(jsonlite)
 library(ckanr)
 
+httr::set_config(httr::user_agent("Mozilla/5.0 (CKAN Bulk Uploader Script)"))
+
 # function to clean text
 clean_text <- function(text) {
   if (is.na(text) || is.null(text)) {
@@ -269,9 +271,6 @@ fetch_check_create_organization <- function(api_key, ckan_url, org_name = NULL) 
 # fetch and check for existing datasets
 fetch_and_check_datasets <- function(api_key, ckan_url, dataset_title = NULL, dataset_name = NULL) {
   
-  # conn
-  ckanr_setup(url = ckan_url, key = api_key)
-  
   # list structure
   existing_datasets <- list(
     names = character(0),
@@ -279,26 +278,45 @@ fetch_and_check_datasets <- function(api_key, ckan_url, dataset_title = NULL, da
     ids = list()
   )
   
-  search_result <- package_search(rows = 10000)
+  # paginate through package_search manually, same pattern as organization_list
+  all_datasets <- list()
+  rows_per_page <- 1000
+  start <- 0
   
-  if (is.list(search_result) && !is.null(search_result$results)) {
-    dataset_count <- length(search_result$results)
+  repeat {
+    response <- GET(
+      url = paste0(ckan_url, "/api/3/action/package_search?rows=", rows_per_page, "&start=", start),
+      add_headers("Authorization" = api_key)
+    )
     
-    if (dataset_count > 0) {
-      for (dataset in search_result$results) {
-        name <- dataset$name
-        title <- dataset$title
-        id <- dataset$id
-        
-        existing_datasets$names <- c(existing_datasets$names, name)
-        existing_datasets$titles <- c(existing_datasets$titles, title)
-        existing_datasets$ids[[name]] <- id
-        
-        # mod title for fuzzy matching
-        mod_title <- tolower(gsub("[^a-zA-Z0-9]", "", title))
-        if (nchar(mod_title) > 0) {
-          existing_datasets$ids[[paste0("title_", mod_title)]] <- id
-        }
+    result <- content(response)
+    
+    if (!is.null(result$success) && result$success && length(result$result$results) > 0) {
+      batch <- result$result$results
+      all_datasets <- c(all_datasets, batch)
+      
+      if (length(batch) < rows_per_page) break
+      
+      start <- start + rows_per_page
+    } else {
+      break
+    }
+  }
+  
+  if (length(all_datasets) > 0) {
+    for (dataset in all_datasets) {
+      name <- dataset$name
+      title <- dataset$title
+      id <- dataset$id
+      
+      existing_datasets$names <- c(existing_datasets$names, name)
+      existing_datasets$titles <- c(existing_datasets$titles, title)
+      existing_datasets$ids[[name]] <- id
+      
+      # mod title for fuzzy matching
+      mod_title <- tolower(gsub("[^a-zA-Z0-9]", "", title))
+      if (nchar(mod_title) > 0) {
+        existing_datasets$ids[[paste0("title_", mod_title)]] <- id
       }
     }
   }
@@ -397,6 +415,21 @@ is_url <- function(path) {
 }
 
 
+# fetch tag list
+fetch_tag_list <- function(api_key, ckan_url) {
+  response <- GET(
+    url = paste0(ckan_url, "/api/3/action/tag_list?all_fields=true"),
+    add_headers("Authorization" = api_key)
+  )
+  
+  result <- content(response)
+  
+  if (!is.null(result$success) && result$success) {
+    return(result$result)
+  } else {
+    return(list())
+  }
+}
 
 # create dataset and upload resources
 upload_datasets_and_resources <- function(datasets_csv_path, resources_csv_path, api_key, ckan_url) {
@@ -553,8 +586,7 @@ upload_datasets_and_resources <- function(datasets_csv_path, resources_csv_path,
       )
       
       # get existing
-      ckanr_setup(url = ckan_url, key = api_key)
-      existing_tags <- tag_list(limit = 10000)
+      existing_tags <- fetch_tag_list(api_key, ckan_url)
       
       if (length(existing_tags) > 0) {
         for (tag_item in existing_tags) {
@@ -1064,23 +1096,22 @@ upload_datasets_and_resources <- function(datasets_csv_path, resources_csv_path,
 }
 
 # prod
-api_key_prod <- "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJmdFRwWWF4akI3bDBHS1BaYlhiOUp1bTNsMzZlSGNJR3d5VHR2Qy1Hb2dNIiwiaWF0IjoxNzU4MDU0ODM1fQ.R_avMA4_9f7vssBBL5Omq7Di78QAEzm12emBGIxNmwg"
+api_key_prod <- "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 ckan_url_prod <- "https://resources.sipexchangebc.com"
 
 # staging
-api_key_stag <- "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJleW10aTFZZHZMSmRDc21Xd2p3QzhfRzZIQmpRaEVYSlFCSVVWN0VBMzJBIiwiaWF0IjoxNzU4NTU0NTY3fQ.a_JVgUlMWkg11SpK9vHJyFP5l6KNPmi6GQCZNzoPsmg"
+api_key_stag <- "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 ckan_url_stag <- "http://staging-resources.sipexchangebc.com"
 
 # local test
 api_key_dev <- "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 ckan_url_dev <- "http://localhost:5000/"
 
-datasets_csv_path <- "./datasets data/datasets_190126.csv"
-resources_csv_path <- "./resources data/resources_190126.csv"
+
+datasets_csv_path <- "./datasets.csv"
+resources_csv_path <- "./resources.csv"
+
 
 # run function
-#results <- upload_datasets_and_resources(datasets_csv_path, resources_csv_path, 
- #                                        api_key_stag, ckan_url_stag)
-
 results <- upload_datasets_and_resources(datasets_csv_path, resources_csv_path, 
                                          api_key_prod, ckan_url_prod)
