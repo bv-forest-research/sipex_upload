@@ -15,8 +15,6 @@ clean_text <- function(text) {
   
   # convert text to ASCII keep hyphens and punctuations
   text <- iconv(text, to = "ASCII//TRANSLIT", sub = "")
-  # esc special characters
-  text <- gsub('([\\\\"])', "\\\\\\1", text)
   # new lines
   text <- gsub("[\r\n\t]", " ", text)
   # weird characters from paste
@@ -759,6 +757,31 @@ upload_datasets_and_resources <- function(datasets_csv_path, resources_csv_path,
       }
     }
     
+    ##### lat / long #####
+    site_locations <- list()
+    lat <- ""
+    lng <- ""
+    
+    if ("Latitude" %in% colnames(dataset) && !is.na(dataset[["Latitude"]])) {
+      lat <- trimws(as.character(dataset[["Latitude"]]))
+    }
+    if ("Longitude" %in% colnames(dataset) && !is.na(dataset[["Longitude"]])) {
+      lng <- trimws(as.character(dataset[["Longitude"]]))
+    }
+    
+    if (lat != "" || lng != "") {
+      # basic sanity check
+      lat_num <- suppressWarnings(as.numeric(lat))
+      lng_num <- suppressWarnings(as.numeric(lng))
+      if (lat != "" && (is.na(lat_num) || abs(lat_num) > 90))  cat("  Warning: invalid latitude:", lat, "\n")
+      if (lng != "" && (is.na(lng_num) || abs(lng_num) > 180)) cat("  Warning: invalid longitude:", lng, "\n")
+      
+      site_locations <- list(list(
+        lat = lat,
+        lng = lng
+      ))
+    }
+    
     ##### metadata #####
     body <- list(
       name = dataset_name,
@@ -796,6 +819,10 @@ upload_datasets_and_resources <- function(datasets_csv_path, resources_csv_path,
     
     if (!is.null(publication_yr)) {
       body$publication_yr <- publication_yr
+    }
+    
+    if (length(site_locations) > 0) {
+      body$site_locations <- site_locations
     }
     
     # convert to json - fixes special chars issue in desc
