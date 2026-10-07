@@ -1148,7 +1148,7 @@ upload_datasets_and_resources <- function(datasets_csv_path, resources_csv_path,
 }
 
 # prod
-api_key_prod <- "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJmdFRwWWF4akI3bDBHS1BaYlhiOUp1bTNsMzZlSGNJR3d5VHR2Qy1Hb2dNIiwiaWF0IjoxNzU4MDU0ODM1fQ.R_avMA4_9f7vssBBL5Omq7Di78QAEzm12emBGIxNmwg"
+api_key_prod <- "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 ckan_url_prod <- "https://resources.sipexchangebc.com"
 
 # staging
