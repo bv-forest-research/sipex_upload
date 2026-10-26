@@ -15,8 +15,6 @@ clean_text <- function(text) {
   
   # convert text to ASCII keep hyphens and punctuations
   text <- iconv(text, to = "ASCII//TRANSLIT", sub = "")
-  # esc special characters
-  text <- gsub('([\\\\"])', "\\\\\\1", text)
   # new lines
   text <- gsub("[\r\n\t]", " ", text)
   # weird characters from paste
@@ -444,7 +442,11 @@ upload_datasets_and_resources <- function(datasets_csv_path, resources_csv_path,
   existing_data <- fetch_result$datasets
   
   # read csv
-  datasets <- read_csv(datasets_csv_path)
+  datasets <- read_csv(datasets_csv_path,
+                       col_types = cols(.default = col_guess(),
+                                        Latitude = col_character(),
+                                        Longitude = col_character()))
+  
   resources <- read_csv(resources_csv_path)
   
   # create df
@@ -759,6 +761,52 @@ upload_datasets_and_resources <- function(datasets_csv_path, resources_csv_path,
       }
     }
     
+    ##### site locations #####
+    site_locations <- list()
+    
+    lats  <- character(0)
+    lngs  <- character(0)
+    sites <- character(0)
+    
+    if ("Latitude" %in% colnames(dataset) && !is.na(dataset[["Latitude"]])) {
+      lats <- trimws(strsplit(as.character(dataset[["Latitude"]]), ";")[[1]])
+    }
+    if ("Longitude" %in% colnames(dataset) && !is.na(dataset[["Longitude"]])) {
+      lngs <- trimws(strsplit(as.character(dataset[["Longitude"]]), ";")[[1]])
+    }
+    if ("Site Name" %in% colnames(dataset) && !is.na(dataset[["Site Name"]])) {
+      sites <- trimws(strsplit(as.character(dataset[["Site Name"]]), ";")[[1]])
+    }
+    
+    n_locs <- max(length(lats), length(lngs), length(sites))
+    
+    if (n_locs > 0) {
+      if (length(lats) != length(lngs)) {
+        cat("  Warning: number of latitudes (", length(lats), ") and longitudes (",
+            length(lngs), ") don't match\n")
+      }
+      
+      for (k in seq_len(n_locs)) {
+        lat  <- if (k <= length(lats))  lats[k]  else ""
+        lng  <- if (k <= length(lngs))  lngs[k]  else ""
+        site <- if (k <= length(sites)) clean_text(sites[k]) else ""
+        
+        # skip empty entries
+        if (lat == "" && lng == "" && site == "") next
+        
+        # basic sanity check
+        lat_num <- suppressWarnings(as.numeric(lat))
+        lng_num <- suppressWarnings(as.numeric(lng))
+        if (lat != "" && (is.na(lat_num) || abs(lat_num) > 90))  cat("  Warning: invalid latitude:", lat, "\n")
+        if (lng != "" && (is.na(lng_num) || abs(lng_num) > 180)) cat("  Warning: invalid longitude:", lng, "\n")
+        
+        loc <- list(lat = lat, lng = lng)
+        if (site != "") loc$site_name <- site
+        
+        site_locations <- append(site_locations, list(loc))
+      }
+    }
+    
     ##### metadata #####
     body <- list(
       name = dataset_name,
@@ -796,6 +844,10 @@ upload_datasets_and_resources <- function(datasets_csv_path, resources_csv_path,
     
     if (!is.null(publication_yr)) {
       body$publication_yr <- publication_yr
+    }
+    
+    if (length(site_locations) > 0) {
+      body$site_locations <- site_locations
     }
     
     # convert to json - fixes special chars issue in desc
