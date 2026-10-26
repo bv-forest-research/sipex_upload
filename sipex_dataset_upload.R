@@ -1159,7 +1159,6 @@ ckan_url_stag <- "http://staging-resources.sipexchangebc.com"
 api_key_dev <- "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 ckan_url_dev <- "http://localhost:5000/"
 
-setwd("D:/BVRC/R/Github/sipex_upload")
 datasets_csv_path <- "./datasets data/datasets_092426_batch2.csv"
 resources_csv_path <- "./resources data/resources_092426_batch2.csv"
 
